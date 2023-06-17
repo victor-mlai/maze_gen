@@ -1,70 +1,55 @@
-extern crate piston_window;
-
+use clap::Parser;
+use graphics::{clear, Rectangle};
 use piston::WindowSettings;
-use piston_window::*;
+use piston_window::PistonWindow;
 
-#[derive(Debug, Copy, Clone)]
-struct Block {
+mod grid;
+mod maze_gen_algos;
 
-}
-
-impl Block {
-    fn new() -> Block {
-        Block {}
-    }
-}
-
-struct Grid {
-    size: u32,
-    cells: Vec<Block>,
-}
-
-impl Grid {
-    fn new(size: u32) -> Grid {
-        Grid { size: size, cells: vec![Block::new(); (size * size) as usize] }
-    }
-}
-
-struct App
-{
-    size: u32,
-    grid: Grid,
-}
-
-impl App {
-    fn new(window_rez: u32, grid_size: u32) -> App {
-        if grid_size == 0 || window_rez == 0 {
-            panic!("App size cannot be 0!");
-        }
-
-        if grid_size > window_rez {
-            panic!("grid_size > window_rez makes the blocks smaller than a pixel!");
-        }
-
-        App { size: window_rez, grid: Grid::new(grid_size) }
-    }
+/// View Maze generator algorithms
+#[derive(Parser)]
+#[command(author, version, about, long_about = None)] // Read from `Cargo.toml`
+struct CmdOpts {
+    /// the resolution of the app in pixels, where (w, h) = (rez, rez)
+    #[arg(default_value_t = 720)]
+    win_size: u32,
+    /// Number of rows/columns the maze will have
+    #[arg(default_value_t = 36)]
+    nr_rows: u32,
 }
 
 fn main() {
-    let app = App::new(700, 101);
+    let args = CmdOpts::parse();
 
-    let mut window: PistonWindow = WindowSettings::new("Maze Generator", (app.size, app.size))
-        .exit_on_esc(true)
-        .resizable(false)
-        .build()
-        .expect("Failed to build window");
+    const BG_COL: [f32; 4] = [0.; 4];
+    const FG_COL: [f32; 4] = [1.; 4];
+
+    let block_widget = Rectangle::new(FG_COL);
+    let rect_size: f64 = (args.win_size as f64) / (args.nr_rows * 2 + 1) as f64;
+
+    let mut window: PistonWindow =
+        WindowSettings::new("Maze Generator", (args.win_size, args.win_size))
+            .exit_on_esc(true)
+            .resizable(true)
+            .build()
+            .expect("Failed to build window");
+
+    let maze = maze_gen_algos::create_rand_prim(args.nr_rows, None, None);
 
     while let Some(event) = window.next() {
         window.draw_2d(&event, |ctx, graphics, _| {
-            const BLACK: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
-            clear(BLACK, graphics);
+            clear(BG_COL, graphics);
 
-            let rectangle = Rectangle::new([1.0, 1.0, 1.0, 1.0]);
-            let rect_size = app.size as f64 / app.grid.size as f64;
-            for i in 0..app.grid.size as i32 {
-                for j in 0..app.grid.size as i32 {
-                    if i % 2 == 0 || j % 2 == 0 {
-                        rectangle.draw([i as f64 * rect_size, j as f64 * rect_size, rect_size, rect_size], &ctx.draw_state, ctx.transform, graphics);
+            for i in 0..maze.size {
+                for j in 0..maze.size {
+                    if let grid::Cell::Wall = maze.get_cell(i, j).unwrap() {
+                        let rect_pos = ((rect_size * i as f64), (rect_size * j as f64));
+                        block_widget.draw(
+                            [rect_pos.0, rect_pos.1, rect_size, rect_size],
+                            &ctx.draw_state,
+                            ctx.transform,
+                            graphics,
+                        );
                     }
                 }
             }

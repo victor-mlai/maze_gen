@@ -7,8 +7,11 @@ edition = "2021"
 name = "maze_gen"
 
 [dependencies]
+rand = { version = "0.8.5", features = ["default"] }
+queues = "1.1.0"
 piston = "0.53.0"
 piston_window = "0.123.0"
 piston2d-graphics = "0.42.0"
-pistoncore-glutin_window = "0.70.0"
 piston2d-opengl_graphics = "0.81.0"
+pistoncore-glutin_window = "0.70.0"
+clap = { version = "4.1", features = ["derive"] }
